@@ -8,119 +8,136 @@ import {
   InteractiveMapMock,
   BottomInfoPanel,
   BottomNavBar,
+  ReportModal,
   type NavTabId,
 } from '@/components/home';
+import { RoutesView } from '@/components/routes/routes-view';
+import { SchedulesView } from '@/components/schedules/schedules-view';
+import { ProfileView } from '@/components/profile/profile-view';
 import { type BusStatusData } from '@/components/ui';
-
-// Mock data based on the Alagoas University Transportation report
-const ROUTE_BUS_DATA: Record<string, { origin: string; destination: string; bus: BusStatusData }> = {
-  paripueira: {
-    origin: 'Paripueira',
-    destination: 'Maceió',
-    bus: {
-      id: 'bus-1',
-      code: 'B-PAR-01',
-      updatedAt: 'há 4 min',
-      location: 'AL-101 Norte',
-      reporter: 'Lucas M.',
-      occupancyPercent: 80,
-      occupancyLabel: 'Cheio',
-      comment: 'Saiu de Paripueira com 5 min de atraso',
-    },
-  },
-  'barra-de-santo-antonio': {
-    origin: 'Barra de Santo Antônio',
-    destination: 'Maceió',
-    bus: {
-      id: 'bus-2',
-      code: 'B-BSA-02',
-      updatedAt: 'há 2 min',
-      location: 'Trevo de São Luís do Quitunde',
-      reporter: 'Camila R.',
-      occupancyPercent: 55,
-      occupancyLabel: 'Moderado',
-      comment: 'Trânsito fluido na AL-101 Norte',
-    },
-  },
-  'marechal-deodoro': {
-    origin: 'Marechal Deodoro',
-    destination: 'Maceió',
-    bus: {
-      id: 'bus-3',
-      code: 'B-MD-04',
-      updatedAt: 'há 6 min',
-      location: 'Polo Cloroquímico',
-      reporter: 'Rafael S.',
-      occupancyPercent: 30,
-      occupancyLabel: 'Livre',
-      comment: 'Embarque normal nas paradas',
-    },
-  },
-  'rio-largo': {
-    origin: 'Rio Largo',
-    destination: 'Maceió',
-    bus: {
-      id: 'bus-4',
-      code: 'B-RL-03',
-      updatedAt: 'há 1 min',
-      location: 'BR-104 · Aeroporto',
-      reporter: 'Ana P.',
-      occupancyPercent: 75,
-      occupancyLabel: 'Cheio',
-      comment: 'Parada cheia na entrada do aeroporto',
-    },
-  },
-};
+import { ROUTES as INITIAL_ROUTES, Route, crowdLabel, minutesAgo } from '@/data/routes';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const [routes, setRoutes] = useState<Route[]>(INITIAL_ROUTES);
   const [selectedRouteId, setSelectedRouteId] = useState<string>('paripueira');
   const [activeTab, setActiveTab] = useState<NavTabId>('map');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  const currentRouteData = ROUTE_BUS_DATA[selectedRouteId] || ROUTE_BUS_DATA.paripueira;
+  // Current selected route
+  const currentRoute = routes.find((r) => r.id === selectedRouteId) || routes[0];
+
+  // Convert activeBus to BusStatusData format for the UI card
+  const currentBusData: BusStatusData | null = currentRoute.activeBus
+    ? {
+        id: currentRoute.activeBus.id,
+        code: currentRoute.activeBus.id,
+        updatedAt: minutesAgo(currentRoute.activeBus.reportedAt),
+        location: currentRoute.activeBus.stopName,
+        reporter: currentRoute.activeBus.reportedBy,
+        occupancyPercent: currentRoute.activeBus.crowdLevel,
+        occupancyLabel: crowdLabel(currentRoute.activeBus.crowdLevel),
+        comment: currentRoute.activeBus.comment,
+      }
+    : null;
 
   const handleSelectBusFromMap = (busCode: string) => {
-    // If user taps on a bus tooltip on map, automatically switch to its route
-    if (busCode.includes('RL')) {
-      setSelectedRouteId('rio-largo');
-    } else if (busCode.includes('BSA')) {
-      setSelectedRouteId('barra-de-santo-antonio');
-    } else {
-      setSelectedRouteId('paripueira');
+    const matched = routes.find((r) => r.activeBus?.id === busCode);
+    if (matched) {
+      setSelectedRouteId(matched.id);
     }
+  };
+
+  const handleSendReport = (newReport: { stopName: string; crowdLevel: number; comment?: string }) => {
+    setRoutes((prevRoutes) =>
+      prevRoutes.map((r) => {
+        if (r.id === currentRoute.id) {
+          return {
+            ...r,
+            totalReports: r.totalReports + 1,
+            activeBus: {
+              id: r.activeBus?.id || `B-${r.origin.substring(0, 3).toUpperCase()}-01`,
+              reportedBy: 'Você',
+              reportedAt: new Date().toISOString(),
+              coords: [-35.735, -9.58],
+              stopName: newReport.stopName,
+              crowdLevel: newReport.crowdLevel,
+              comment: newReport.comment,
+            },
+          };
+        }
+        return r;
+      })
+    );
+  };
+
+  const handleSelectRouteFromList = (routeId: string) => {
+    setSelectedRouteId(routeId);
+    setActiveTab('map');
   };
 
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
 
-      {/* Main Map View Area */}
-      <View style={styles.mapContainer}>
-        <InteractiveMapMock onSelectBus={handleSelectBusFromMap} />
+      {/* Main Tab Content */}
+      <View style={styles.mainContent}>
+        {activeTab === 'map' && (
+          <View style={styles.mapContainer}>
+            <InteractiveMapMock onSelectBus={handleSelectBusFromMap} />
 
-        {/* Floating Header Card and Route Filter Carousel */}
-        <View style={[styles.topHeaderOverlay, { paddingTop: insets.top + 8 }]}>
-          <LocationHeader
-            selectedRouteId={selectedRouteId}
-            onSelectRoute={setSelectedRouteId}
-            activeBusesCount={3}
+            {/* Floating Header Card and Route Filter Carousel */}
+            <View style={[styles.topHeaderOverlay, { paddingTop: insets.top + 8 }]}>
+              <LocationHeader
+                selectedRouteId={selectedRouteId}
+                onSelectRoute={setSelectedRouteId}
+                activeBusesCount={routes.filter((r) => r.activeBus).length}
+              />
+            </View>
+
+            {/* Bottom Sheet Details Panel */}
+            <View style={styles.bottomPanelContainer}>
+              <BottomInfoPanel
+                origin={currentRoute.origin}
+                destination={currentRoute.destination}
+                color={currentRoute.color}
+                busData={currentBusData}
+                campusTags={currentRoute.universities}
+                totalReports={currentRoute.totalReports}
+                onOpenReportModal={() => setIsReportModalOpen(true)}
+              />
+            </View>
+          </View>
+        )}
+
+        {activeTab === 'routes' && (
+          <RoutesView
+            routes={routes}
+            onSelectRouteOnMap={handleSelectRouteFromList}
           />
-        </View>
+        )}
+
+        {activeTab === 'schedules' && <SchedulesView routes={routes} />}
+
+        {activeTab === 'profile' && (
+          <ProfileView
+            routes={routes}
+            favoriteRouteId={selectedRouteId}
+            onSelectFavoriteRoute={setSelectedRouteId}
+          />
+        )}
       </View>
 
-      {/* Bottom Sheet Details Panel */}
-      <BottomInfoPanel
-        origin={currentRouteData.origin}
-        destination={currentRouteData.destination}
-        busData={currentRouteData.bus}
-        campusTags={['UFAL', 'CESMAC']}
+      {/* Report Modal */}
+      <ReportModal
+        visible={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        route={currentRoute}
+        onSubmit={handleSendReport}
       />
 
       {/* Persistent Bottom Navigation Bar */}
-      <BottomNavBar
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
-      />
+      <BottomNavBar activeTab={activeTab} onChangeTab={setActiveTab} />
     </View>
   );
 }
@@ -130,6 +147,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#090D16',
   },
+  mainContent: {
+    flex: 1,
+  },
   mapContainer: {
     flex: 1,
     position: 'relative',
@@ -138,6 +158,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 16,
+    right: 0,
+    zIndex: 10,
+  },
+  bottomPanelContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
     right: 0,
     zIndex: 10,
   },
