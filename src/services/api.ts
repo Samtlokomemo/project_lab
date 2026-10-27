@@ -13,7 +13,7 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.exemplo.com/v1';
+const BASE_URL = 'http://localhost:3000';
 
 async function request<T>(endpoint: string, config: RequestConfig = {}): Promise<ApiResponse<T>> {
   const { params, headers, ...customConfig } = config;
