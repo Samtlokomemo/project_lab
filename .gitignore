@@ -42,3 +42,6 @@ example
 /ios
 /android
 backend/node_modules/
+
+# local assets and mockups
+imagensmodelo/
