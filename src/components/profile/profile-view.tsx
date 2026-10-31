@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+
+import { Route } from '@/data/routes';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -8,25 +11,43 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Route } from '@/data/routes';
 
 interface ProfileViewProps {
   routes: Route[];
   favoriteRouteId: string;
   onSelectFavoriteRoute: (routeId: string) => void;
+  onLogout: () => void;
 }
 
 const USER_HISTORY = [
-  { line: 'Linha Paripueira', color: '#3fb950', stop: 'AL-101 Norte', crowd: 'Moderado (72%)', time: 'Hoje, 06:47' },
-  { line: 'Linha Paripueira', color: '#3fb950', stop: 'Ponto Mirante', crowd: 'Moderado (55%)', time: 'Ontem, 07:02' },
-  { line: 'Linha Barra de Sto. Antônio', color: '#58a6ff', stop: 'BR-104', crowd: 'Lotado (88%)', time: 'Seg, 27 Set' },
+  {
+    line: 'Linha Paripueira',
+    color: '#3fb950',
+    stop: 'AL-101 Norte',
+    crowd: 'Moderado (72%)',
+    time: 'Hoje, 06:47',
+  },
+  {
+    line: 'Linha Paripueira',
+    color: '#3fb950',
+    stop: 'Ponto Mirante',
+    crowd: 'Moderado (55%)',
+    time: 'Ontem, 07:02',
+  },
+  {
+    line: 'Linha Barra de Sto. Antônio',
+    color: '#58a6ff',
+    stop: 'BR-104',
+    crowd: 'Lotado (88%)',
+    time: 'Seg, 27 Set',
+  },
 ];
 
 export function ProfileView({
   routes,
   favoriteRouteId,
   onSelectFavoriteRoute,
+  onLogout,
 }: ProfileViewProps) {
   const insets = useSafeAreaInsets();
   const [notifyReports, setNotifyReports] = useState(true);
@@ -34,18 +55,25 @@ export function ProfileView({
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Card Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>GS</Text>
           </View>
+
           <View style={styles.userInfo}>
             <Text style={styles.userName}>Gabriel Souza</Text>
             <Text style={styles.userEmail}>gabriel.souza@ufal.br</Text>
+
             <View style={styles.badgeRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.badgeText}>Estudante · UFAL Campus A.C. Simões</Text>
+              <Text style={styles.badgeText}>
+                Estudante · UFAL Campus A.C. Simões
+              </Text>
             </View>
           </View>
         </View>
@@ -56,10 +84,14 @@ export function ProfileView({
             <Text style={styles.metricValue}>14</Text>
             <Text style={styles.metricLabel}>Relatos feitos</Text>
           </View>
+
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: '#3fb950' }]}>84 pts</Text>
+            <Text style={[styles.metricValue, { color: '#3fb950' }]}>
+              84 pts
+            </Text>
             <Text style={styles.metricLabel}>Colaboração</Text>
           </View>
+
           <View style={styles.metricCard}>
             <Text style={styles.metricValue}>Nível 3</Text>
             <Text style={styles.metricLabel}>Comunidade</Text>
@@ -69,6 +101,7 @@ export function ProfileView({
         {/* Favorite Line Preference */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Minha Linha Principal</Text>
+
           <Text style={styles.sectionSubtitle}>
             A linha selecionada será exibida como padrão na tela inicial
           </Text>
@@ -76,27 +109,53 @@ export function ProfileView({
           <View style={styles.routesList}>
             {routes.map((route) => {
               const isFav = favoriteRouteId === route.id;
+
               return (
                 <TouchableOpacity
                   key={route.id}
                   onPress={() => onSelectFavoriteRoute(route.id)}
                   style={[
                     styles.routeItem,
-                    isFav && { borderColor: route.color, backgroundColor: `${route.color}15` },
+                    isFav && {
+                      borderColor: route.color,
+                      backgroundColor: `${route.color}15`,
+                    },
                   ]}
                 >
-                  <View style={[styles.routeIconBox, { backgroundColor: `${route.color}25` }]}>
+                  <View
+                    style={[
+                      styles.routeIconBox,
+                      { backgroundColor: `${route.color}25` },
+                    ]}
+                  >
                     <Ionicons name="bus" size={18} color={route.color} />
                   </View>
+
                   <View style={styles.routeItemInfo}>
-                    <Text style={[styles.routeItemName, isFav && { color: '#e6edf3', fontWeight: '700' }]}>
+                    <Text
+                      style={[
+                        styles.routeItemName,
+                        isFav && {
+                          color: '#e6edf3',
+                          fontWeight: '700',
+                        },
+                      ]}
+                    >
                       {route.name}
                     </Text>
+
                     <Text style={styles.routeItemSub}>
                       {route.origin} ➔ {route.destination}
                     </Text>
                   </View>
-                  {isFav && <Ionicons name="checkmark-circle" size={22} color={route.color} />}
+
+                  {isFav && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color={route.color}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -106,30 +165,49 @@ export function ProfileView({
         {/* Notification Preferences */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notificações</Text>
+
           <View style={styles.settingsGroup}>
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Novos relatos em tempo real</Text>
-                <Text style={styles.settingDesc}>Avisar quando houver reporte na minha linha</Text>
+                <Text style={styles.settingTitle}>
+                  Novos relatos em tempo real
+                </Text>
+
+                <Text style={styles.settingDesc}>
+                  Avisar quando houver reporte na minha linha
+                </Text>
               </View>
+
               <Switch
                 value={notifyReports}
                 onValueChange={setNotifyReports}
                 thumbColor={notifyReports ? '#3fb950' : '#8b949e'}
-                trackColor={{ false: '#21262d', true: '#3fb95040' }}
+                trackColor={{
+                  false: '#21262d',
+                  true: '#3fb95040',
+                }}
               />
             </View>
 
             <View style={[styles.settingRow, styles.settingRowBorder]}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Lembrete de partida</Text>
-                <Text style={styles.settingDesc}>Notificar 15 min antes da saída do ônibus</Text>
+                <Text style={styles.settingTitle}>
+                  Lembrete de partida
+                </Text>
+
+                <Text style={styles.settingDesc}>
+                  Notificar 15 min antes da saída do ônibus
+                </Text>
               </View>
+
               <Switch
                 value={notifyDepartures}
                 onValueChange={setNotifyDepartures}
                 thumbColor={notifyDepartures ? '#3fb950' : '#8b949e'}
-                trackColor={{ false: '#21262d', true: '#3fb95040' }}
+                trackColor={{
+                  false: '#21262d',
+                  true: '#3fb95040',
+                }}
               />
             </View>
           </View>
@@ -137,20 +215,51 @@ export function ProfileView({
 
         {/* Recent Contributions History */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Histórico de Contribuições</Text>
+          <Text style={styles.sectionTitle}>
+            Histórico de Contribuições
+          </Text>
+
           <View style={styles.historyList}>
             {USER_HISTORY.map((h, i) => (
               <View key={i} style={styles.historyItem}>
-                <View style={[styles.historyDot, { backgroundColor: h.color }]} />
+                <View
+                  style={[
+                    styles.historyDot,
+                    { backgroundColor: h.color },
+                  ]}
+                />
+
                 <View style={styles.historyInfo}>
-                  <Text style={styles.historyLine}>{h.line} · {h.stop}</Text>
-                  <Text style={styles.historyCrowd}>Lotação: {h.crowd}</Text>
+                  <Text style={styles.historyLine}>
+                    {h.line} · {h.stop}
+                  </Text>
+
+                  <Text style={styles.historyCrowd}>
+                    Lotação: {h.crowd}
+                  </Text>
                 </View>
+
                 <Text style={styles.historyTime}>{h.time}</Text>
               </View>
             ))}
           </View>
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={onLogout}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="log-out-outline"
+            size={20}
+            color="#f85149"
+          />
+          <Text style={styles.logoutButtonText}>
+            Sair da conta
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -352,5 +461,22 @@ const styles = StyleSheet.create({
   historyTime: {
     fontSize: 10,
     color: '#6e7681',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#f8514915',
+    borderWidth: 1,
+    borderColor: '#f8514960',
+    borderRadius: 14,
+    padding: 15,
+    marginTop: 5,
+  },
+  logoutButtonText: {
+    color: '#f85149',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

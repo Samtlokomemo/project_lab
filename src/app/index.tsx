@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { StatusBar } from 'expo-status-bar';
+import { signOut } from 'firebase/auth';
+import { useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { auth } from '@/database/firebase';
 
 import {
-  LocationHeader,
-  InteractiveMapMock,
   BottomInfoPanel,
   BottomNavBar,
+  InteractiveMapMock,
+  LocationHeader,
   ReportModal,
   type NavTabId,
 } from '@/components/home';
+import { ProfileView } from '@/components/profile/profile-view';
 import { RoutesView } from '@/components/routes/routes-view';
 import { SchedulesView } from '@/components/schedules/schedules-view';
-import { ProfileView } from '@/components/profile/profile-view';
 import { type BusStatusData } from '@/components/ui';
 import { ROUTES as INITIAL_ROUTES, Route, crowdLabel, minutesAgo } from '@/data/routes';
 
@@ -76,6 +80,16 @@ export default function HomeScreen() {
     setActiveTab('map');
   };
 
+  // Sair da conta do usuário
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível sair da conta.');
+      console.error('Erro ao sair da conta:', error);
+    }
+  };
+
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
@@ -124,6 +138,7 @@ export default function HomeScreen() {
             routes={routes}
             favoriteRouteId={selectedRouteId}
             onSelectFavoriteRoute={setSelectedRouteId}
+            onLogout={handleLogout}
           />
         )}
       </View>

@@ -1,4 +1,17 @@
-import { localDatabase } from './index';
+
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 export interface UserProfile {
   id: string;
@@ -17,71 +30,141 @@ export interface UserReportHistory {
   time: string;
 }
 
-/**
- * ============================================================================
- * 👤 SERVIÇO DE AUTENTICAÇÃO E PERFIL (PARA EQUIPE DO BANCO DE DADOS)
- * ============================================================================
- * Aqui a equipe de banco de dados / autenticação pode plugar o SQLite,
- * Firebase, Supabase ou o adapter definitivo de persistência.
- */
+function getAuthenticatedUser() {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error(
+      'Você precisa estar autenticado para acessar seus dados.'
+    );
+  }
+
+  return user;
+}
+
+function getUserDocument(userId: string) {
+  return doc(db, 'users', userId);
+}
+
 export const authService = {
   /**
-   * Obtém os dados do estudante autenticado.
+   * Obtém ou cria o perfil do estudante autenticado no Firestore.
    */
   async getCurrentUser(): Promise<UserProfile> {
-    const cached = await localDatabase.getItem('@user_profile');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {}
+    const user = getAuthenticatedUser();
+    const userRef = getUserDocument(user.uid);
+    const snapshot = await getDoc(userRef);
+
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+
+      return {
+        id: user.uid,
+        name: data.name ?? user.displayName ?? '',
+        email: data.email ?? user.email ?? '',
+        university: data.university ?? 'UFAL',
+        campus: data.campus ?? 'Campus A.C. Simões',
+        favoriteRouteId: data.favoriteRouteId ?? '',
+        points: data.points ?? 0,
+      };
     }
 
-    // Perfil mock inicial padrão:
-    return {
-      id: 'usr_gabriel_01',
-      name: 'Gabriel Souza',
-      email: 'gabriel.souza@ufal.br',
+    const profile: UserProfile = {
+      id: user.uid,
+      name: user.displayName ?? '',
+      email: user.email ?? '',
       university: 'UFAL',
       campus: 'Campus A.C. Simões',
-      favoriteRouteId: 'paripueira',
-      points: 84,
+      favoriteRouteId: '',
+      points: 0,
     };
+
+    await setDoc(userRef, {
+      ...profile,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    return profile;
   },
 
   /**
-   * Atualiza a rota favorita do usuário no banco / cache local.
+   * Atualiza a rota favorita do estudante no Firestore.
    */
   async updateFavoriteRoute(routeId: string): Promise<void> {
-    const user = await this.getCurrentUser();
-    user.favoriteRouteId = routeId;
-    await localDatabase.setItem('@user_profile', JSON.stringify(user));
+    const user = getAuthenticatedUser();
+    const userRef = getUserDocument(user.uid);
+
+    // Garante que o perfil exista antes da atualização.
+    await this.getCurrentUser();
+
+    await updateDoc(userRef, {
+      favoriteRouteId: routeId,
+      updatedAt: serverTimestamp(),
+    });
   },
 
   /**
-   * Salva o histórico de relatos enviados pelo usuário.
+   * Salva um relato no histórico particular do estudante.
    */
-  async saveReportToHistory(report: UserReportHistory): Promise<void> {
-    const raw = await localDatabase.getItem('@user_history');
-    const history: UserReportHistory[] = raw ? JSON.parse(raw) : [];
-    history.unshift(report);
-    await localDatabase.setItem('@user_history', JSON.stringify(history));
+  async saveReportToHistory(
+    report: UserReportHistory
+  ): Promise<void> {
+    const user = getAuthenticatedUser();
+
+    await this.getCurrentUser();
+
+    const historyRef = collection(
+      db,
+      'users',
+      user.uid,
+      'history'
+    );
+
+    await addDoc(historyRef, {
+      ...report,
+      createdAt: serverTimestamp(),
+    });
   },
 
   /**
-   * Lista o histórico de colaborações do usuário.
+   * Lista o histórico de relatos do estudante autenticado.
    */
   async getReportHistory(): Promise<UserReportHistory[]> {
-    const raw = await localDatabase.getItem('@user_history');
-    if (raw) {
-      try {
-        return JSON.parse(raw);
-      } catch (e) {}
-    }
+    const user = getAuthenticatedUser();
 
-    return [
-      { line: 'Linha Paripueira', stop: 'AL-101 Norte', crowdLevel: 72, time: 'Hoje, 06:47' },
-      { line: 'Linha Paripueira', stop: 'Ponto Mirante', crowdLevel: 55, time: 'Ontem, 07:02' },
-      { line: 'Linha Barra de Sto. Antônio', stop: 'BR-104', crowdLevel: 88, time: 'Seg, 27 Set' },
-    ];
+    const historyRef = collection(
+      db,
+      'users',
+      user.uid,
+      'history'
+    );
+
+    const historyQuery = query(
+      historyRef,
+      orderBy('createdAt', 'desc')
+    );
+
+    const snapshot = await getDocs(historyQuery);
+
+    return snapshot.docs.map((item) => {
+      const data = item.data();
+
+      let time = data.time ?? '';
+
+      if (data.createdAt?.toDate) {
+        time = data.createdAt.toDate().toLocaleString('pt-BR', {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        });
+      }
+
+      return {
+        line: data.line ?? '',
+        stop: data.stop ?? '',
+        crowdLevel: data.crowdLevel ?? 0,
+        time,
+      };
+    });
   },
 };
