@@ -1,7 +1,7 @@
 export type Stop = {
   name: string;
   city: string;
-  coords: [number, number];
+  coords: [number, number]; // [longitude, latitude]
   type: 'origin' | 'waypoint' | 'destination';
 };
 
@@ -9,7 +9,7 @@ export type BusReport = {
   id: string;
   reportedBy: string;
   reportedAt: string; // ISO string
-  coords: [number, number];
+  coords: [number, number]; // [longitude, latitude]
   stopName: string;
   crowdLevel: number; // 0-100
   comment?: string;
@@ -32,17 +32,15 @@ export const ROUTES: Route[] = [
   {
     id: 'paripueira',
     name: 'Linha Paripueira',
-    color: '#3fb950',
+    color: '#22C55E',
     origin: 'Paripueira',
-    destination: 'UFAL / CESMAC',
-    universities: ['UFAL', 'CESMAC'],
+    destination: 'UNIMA / CESMAC / UFAL',
+    universities: ['UNIMA', 'CESMAC', 'UFAL'],
     stops: [
-      { name: 'Terminal Paripueira', city: 'Paripueira', coords: [-35.5647, -9.4624], type: 'origin' },
-      { name: 'Ponto Mirante', city: 'Paripueira', coords: [-35.582, -9.489], type: 'waypoint' },
-      { name: 'Rodovia AL-101 Norte', city: 'Barra de Santo Antônio', coords: [-35.62, -9.51], type: 'waypoint' },
-      { name: 'Av. Fernandes Lima', city: 'Maceió', coords: [-35.705, -9.56], type: 'waypoint' },
-      { name: 'CESMAC', city: 'Maceió', coords: [-35.735, -9.58], type: 'waypoint' },
-      { name: 'UFAL — Campus A.C. Simões', city: 'Maceió', coords: [-35.7694, -9.5565], type: 'destination' },
+      { name: 'Paripueira (AL-101)', city: 'Paripueira', coords: [-35.5523, -9.4635], type: 'origin' },
+      { name: 'UNIMA (Cruz das Almas)', city: 'Maceió', coords: [-35.695, -9.6213], type: 'waypoint' },
+      { name: 'CESMAC / Farol', city: 'Maceió', coords: [-35.7347, -9.6533], type: 'waypoint' },
+      { name: 'UFAL (Campus A.C. Simões)', city: 'Maceió', coords: [-35.7745, -9.558], type: 'destination' },
     ],
     departures: [
       { time: '05:30', direction: 'ida' },
@@ -61,27 +59,25 @@ export const ROUTES: Route[] = [
       id: 'B-PAR-01',
       reportedBy: 'Lucas M.',
       reportedAt: new Date(Date.now() - 4 * 60000).toISOString(),
-      coords: [-35.64, -9.505],
-      stopName: 'AL-101 Norte',
+      coords: [-35.695, -9.6213],
+      stopName: 'UNIMA (Cruz das Almas)',
       crowdLevel: 72,
-      comment: 'Saiu de Paripueira com 5 min de atraso',
+      comment: 'Passou na UNIMA sentido Farol',
     },
     totalReports: 342,
   },
   {
     id: 'barra-de-santo-antonio',
     name: 'Linha Barra de Sto. Antônio',
-    color: '#58a6ff',
+    color: '#38BDF8',
     origin: 'Barra de Santo Antônio',
-    destination: 'UFAL / UNIT',
-    universities: ['UFAL', 'UNIT'],
+    destination: 'UNIMA / CESMAC / UFAL',
+    universities: ['UNIMA', 'CESMAC', 'UFAL'],
     stops: [
-      { name: 'Terminal Barra de Sto. Antônio', city: 'Barra de Santo Antônio', coords: [-35.4941, -9.408], type: 'origin' },
-      { name: 'Ponto do Mercado', city: 'Barra de Santo Antônio', coords: [-35.51, -9.425], type: 'waypoint' },
-      { name: 'São Luís do Quitunde', city: 'São Luís do Quitunde', coords: [-35.556, -9.332], type: 'waypoint' },
-      { name: 'Entrada de Maceió (BR-104)', city: 'Maceió', coords: [-35.68, -9.53], type: 'waypoint' },
-      { name: 'UNIT — Maceió', city: 'Maceió', coords: [-35.72, -9.57], type: 'waypoint' },
-      { name: 'UFAL — Campus A.C. Simões', city: 'Maceió', coords: [-35.7694, -9.5565], type: 'destination' },
+      { name: 'Barra de Santo Antônio', city: 'Barra de Santo Antônio', coords: [-35.5072, -9.4047], type: 'origin' },
+      { name: 'UNIMA (Cruz das Almas)', city: 'Maceió', coords: [-35.695, -9.6213], type: 'waypoint' },
+      { name: 'CESMAC / Farol', city: 'Maceió', coords: [-35.7347, -9.6533], type: 'waypoint' },
+      { name: 'UFAL (Campus A.C. Simões)', city: 'Maceió', coords: [-35.7745, -9.558], type: 'destination' },
     ],
     departures: [
       { time: '05:00', direction: 'ida' },
@@ -98,27 +94,24 @@ export const ROUTES: Route[] = [
       id: 'B-BSA-02',
       reportedBy: 'Ana P.',
       reportedAt: new Date(Date.now() - 2 * 60000).toISOString(),
-      coords: [-35.61, -9.49],
-      stopName: 'BR-104 · Cruzamento',
+      coords: [-35.635, -9.562],
+      stopName: 'AL-101 Norte',
       crowdLevel: 55,
-      comment: 'Trânsito fluido na AL-101 Norte',
+      comment: 'Descendo a AL-101 sentido UNIMA',
     },
     totalReports: 218,
   },
   {
     id: 'marechal-deodoro',
     name: 'Linha Marechal Deodoro',
-    color: '#e3b341',
+    color: '#F59E0B',
     origin: 'Marechal Deodoro',
-    destination: 'UFAL / UNEAL',
-    universities: ['UFAL', 'UNEAL'],
+    destination: 'CESMAC / UFAL',
+    universities: ['CESMAC', 'UFAL'],
     stops: [
-      { name: 'Praça Marechal Deodoro', city: 'Marechal Deodoro', coords: [-35.8957, -9.7044], type: 'origin' },
-      { name: 'Rodoviária de Marechal', city: 'Marechal Deodoro', coords: [-35.88, -9.695], type: 'waypoint' },
-      { name: 'Santa Lúcia', city: 'Santa Lúcia', coords: [-35.85, -9.68], type: 'waypoint' },
-      { name: 'Av. Gustavo Paiva', city: 'Maceió', coords: [-35.78, -9.65], type: 'waypoint' },
-      { name: 'UNEAL — Maceió', city: 'Maceió', coords: [-35.75, -9.62], type: 'waypoint' },
-      { name: 'UFAL — Campus A.C. Simões', city: 'Maceió', coords: [-35.7694, -9.5565], type: 'destination' },
+      { name: 'Marechal Deodoro (Barra Nova)', city: 'Marechal Deodoro', coords: [-35.834, -9.736], type: 'origin' },
+      { name: 'CESMAC / Farol', city: 'Maceió', coords: [-35.7347, -9.6533], type: 'waypoint' },
+      { name: 'UFAL (Santos Dumont)', city: 'Maceió', coords: [-35.7745, -9.558], type: 'destination' },
     ],
     departures: [
       { time: '05:15', direction: 'ida' },
@@ -135,27 +128,24 @@ export const ROUTES: Route[] = [
       id: 'B-MD-04',
       reportedBy: 'Rafael S.',
       reportedAt: new Date(Date.now() - 6 * 60000).toISOString(),
-      coords: [-35.86, -9.685],
-      stopName: 'Polo Cloroquímico',
+      coords: [-35.758, -9.68],
+      stopName: 'Pontal da Barra',
       crowdLevel: 30,
-      comment: 'Embarque normal nas paradas',
+      comment: 'Cruzando o Pontal sentido Farol',
     },
     totalReports: 189,
   },
   {
     id: 'rio-largo',
     name: 'Linha Rio Largo',
-    color: '#d2a8ff',
+    color: '#C084FC',
     origin: 'Rio Largo',
     destination: 'UFAL / CESMAC',
-    universities: ['UFAL', 'CESMAC', 'UNEAL'],
+    universities: ['UFAL', 'CESMAC'],
     stops: [
-      { name: 'Terminal Rio Largo', city: 'Rio Largo', coords: [-35.8495, -9.4789], type: 'origin' },
-      { name: 'Mata do Rolo', city: 'Rio Largo', coords: [-35.83, -9.495], type: 'waypoint' },
-      { name: 'Aeroporto Zumbi dos Palmares', city: 'Rio Largo', coords: [-35.7915, -9.5108], type: 'waypoint' },
-      { name: 'Av. Menino Marcelo (Via Expressa)', city: 'Maceió', coords: [-35.74, -9.56], type: 'waypoint' },
-      { name: 'CESMAC', city: 'Maceió', coords: [-35.735, -9.58], type: 'waypoint' },
-      { name: 'UFAL — Campus A.C. Simões', city: 'Maceió', coords: [-35.7694, -9.5565], type: 'destination' },
+      { name: 'Rio Largo (Centro)', city: 'Rio Largo', coords: [-35.858, -9.4802], type: 'origin' },
+      { name: 'UFAL / BR-104', city: 'Maceió', coords: [-35.7745, -9.558], type: 'waypoint' },
+      { name: 'CESMAC (Ladeira dos Martírios / Farol)', city: 'Maceió', coords: [-35.7382, -9.6596], type: 'destination' },
     ],
     departures: [
       { time: '05:20', direction: 'ida' },
@@ -171,19 +161,19 @@ export const ROUTES: Route[] = [
       id: 'B-RL-03',
       reportedBy: 'Camila T.',
       reportedAt: new Date(Date.now() - 1 * 60000).toISOString(),
-      coords: [-35.7915, -9.5108],
-      stopName: 'BR-104 · Aeroporto',
+      coords: [-35.7745, -9.558],
+      stopName: 'UFAL / BR-104',
       crowdLevel: 80,
-      comment: 'Parada cheia na entrada do aeroporto',
+      comment: 'Parada na UFAL sentido Farol',
     },
     totalReports: 295,
   },
 ];
 
 export function crowdColor(level: number): string {
-  if (level < 40) return '#3fb950'; // verde - livre / vazio
-  if (level < 75) return '#e3b341'; // amarelo - moderado / cheio
-  return '#f85149'; // vermelho - lotado
+  if (level < 40) return '#22C55E';
+  if (level < 75) return '#F59E0B';
+  return '#EF4444';
 }
 
 export function crowdLabel(level: number): string {

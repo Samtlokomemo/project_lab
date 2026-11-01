@@ -1,4 +1,5 @@
 import { Route } from '@/data/routes';
+import routePathsData from '@/data/route-paths.json';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -21,7 +22,7 @@ export function InteractiveMap({
   const selectedRoute =
     routes.find((r) => r.id === selectedRouteId) || routes[0];
 
-  // Leaflet com OpenStreetMap 100% público oficial + filtro CSS Dark Mode instantâneo e infalível
+  // Leaflet com OpenStreetMap 100% público oficial + traçado fiel pelas ruas/rodovias
   const mapHtml = `
 <!DOCTYPE html>
 <html>
@@ -96,6 +97,7 @@ export function InteractiveMap({
   <div id="map"></div>
   <script>
     const routesData = ${JSON.stringify(routes)};
+    const realPaths = ${JSON.stringify(routePathsData)};
     let activeRouteId = "${selectedRouteId}";
 
     // Inicializa o mapa centrado em Maceió / AL
@@ -116,10 +118,16 @@ export function InteractiveMap({
     function renderMapElements() {
       routesData.forEach(route => {
         const isSelected = route.id === activeRouteId;
-        // Leaflet usa [latitude, longitude]
-        const latLngs = route.stops.map(s => [s.coords[1], s.coords[0]]);
+        
+        // Se houver geometria real da malha viária, usa ela; caso contrário usa paradas
+        let latLngs;
+        if (realPaths && realPaths[route.id] && realPaths[route.id].length > 0) {
+          latLngs = realPaths[route.id].map(coord => [coord[1], coord[0]]);
+        } else {
+          latLngs = route.stops.map(s => [s.coords[1], s.coords[0]]);
+        }
 
-        // Traçado das linhas
+        // Traçado das linhas pelas ruas e avenidas
         const polyline = L.polyline(latLngs, {
           color: route.color,
           weight: isSelected ? 6 : 3.5,
@@ -181,7 +189,13 @@ export function InteractiveMap({
     function fitToActiveRoute() {
       const active = routesData.find(r => r.id === activeRouteId);
       if (active && active.stops.length > 0) {
-        const bounds = L.latLngBounds(active.stops.map(s => [s.coords[1], s.coords[0]]));
+        let latLngs;
+        if (realPaths && realPaths[active.id] && realPaths[active.id].length > 0) {
+          latLngs = realPaths[active.id].map(coord => [coord[1], coord[0]]);
+        } else {
+          latLngs = active.stops.map(s => [s.coords[1], s.coords[0]]);
+        }
+        const bounds = L.latLngBounds(latLngs);
         map.fitBounds(bounds, {
           paddingTopLeft: [60, 90],
           paddingBottomRight: [60, 230],
