@@ -1,16 +1,16 @@
-
 import { StatusBar } from 'expo-status-bar';
 import { signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { authService } from '@/database/auth-service';
 import { auth } from '@/database/firebase';
 
 import {
   BottomInfoPanel,
   BottomNavBar,
-  InteractiveMapMock,
+  InteractiveMap,
   LocationHeader,
   ReportModal,
   type NavTabId,
@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const [selectedRouteId, setSelectedRouteId] = useState<string>('paripueira');
   const [activeTab, setActiveTab] = useState<NavTabId>('map');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
   // Current selected route
   const currentRoute = routes.find((r) => r.id === selectedRouteId) || routes[0];
@@ -52,7 +53,8 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSendReport = (newReport: { stopName: string; crowdLevel: number; comment?: string }) => {
+  const handleSendReport = async (newReport: { stopName: string; crowdLevel: number; comment?: string }) => {
+    // 1. Atualiza estado em tempo real no app
     setRoutes((prevRoutes) =>
       prevRoutes.map((r) => {
         if (r.id === currentRoute.id) {
@@ -73,6 +75,20 @@ export default function HomeScreen() {
         return r;
       })
     );
+
+    // 2. Salva no banco de dados do Firestore no histórico do usuário
+    try {
+      await authService.saveReportToHistory({
+        line: currentRoute.name,
+        stop: newReport.stopName,
+        crowdLevel: newReport.crowdLevel,
+        time: 'Agora há pouco',
+      });
+      // Notifica o perfil para recarregar com o novo relato
+      setProfileRefreshKey((prev) => prev + 1);
+    } catch (err) {
+      console.error('Erro ao salvar relato no banco:', err);
+    }
   };
 
   const handleSelectRouteFromList = (routeId: string) => {
@@ -98,48 +114,66 @@ export default function HomeScreen() {
       <View style={styles.mainContent}>
         {activeTab === 'map' && (
           <View style={styles.mapContainer}>
-            <InteractiveMapMock onSelectBus={handleSelectBusFromMap} />
+            <InteractiveMap
+              routes={routes}
+              selectedRouteId={selectedRouteId}
+              onSelectBus={handleSelectBusFromMap}
+              onSelectRoute={setSelectedRouteId}
+            />
 
             {/* Floating Header Card and Route Filter Carousel */}
             <View style={[styles.topHeaderOverlay, { paddingTop: insets.top + 8 }]}>
-              <LocationHeader
-                selectedRouteId={selectedRouteId}
-                onSelectRoute={setSelectedRouteId}
-                activeBusesCount={routes.filter((r) => r.activeBus).length}
-              />
+              <View style={styles.contentConstrained}>
+                <LocationHeader
+                  selectedRouteId={selectedRouteId}
+                  onSelectRoute={setSelectedRouteId}
+                  activeBusesCount={routes.filter((r) => r.activeBus).length}
+                />
+              </View>
             </View>
 
             {/* Bottom Sheet Details Panel */}
             <View style={styles.bottomPanelContainer}>
-              <BottomInfoPanel
-                origin={currentRoute.origin}
-                destination={currentRoute.destination}
-                color={currentRoute.color}
-                busData={currentBusData}
-                campusTags={currentRoute.universities}
-                totalReports={currentRoute.totalReports}
-                onOpenReportModal={() => setIsReportModalOpen(true)}
-              />
+              <View style={styles.contentConstrained}>
+                <BottomInfoPanel
+                  origin={currentRoute.origin}
+                  destination={currentRoute.destination}
+                  color={currentRoute.color}
+                  busData={currentBusData}
+                  campusTags={currentRoute.universities}
+                  totalReports={currentRoute.totalReports}
+                  onOpenReportModal={() => setIsReportModalOpen(true)}
+                />
+              </View>
             </View>
           </View>
         )}
 
         {activeTab === 'routes' && (
-          <RoutesView
-            routes={routes}
-            onSelectRouteOnMap={handleSelectRouteFromList}
-          />
+          <View style={styles.tabContentWrapper}>
+            <RoutesView
+              routes={routes}
+              onSelectRouteOnMap={handleSelectRouteFromList}
+            />
+          </View>
         )}
 
-        {activeTab === 'schedules' && <SchedulesView routes={routes} />}
+        {activeTab === 'schedules' && (
+          <View style={styles.tabContentWrapper}>
+            <SchedulesView routes={routes} />
+          </View>
+        )}
 
         {activeTab === 'profile' && (
-          <ProfileView
-            routes={routes}
-            favoriteRouteId={selectedRouteId}
-            onSelectFavoriteRoute={setSelectedRouteId}
-            onLogout={handleLogout}
-          />
+          <View style={styles.tabContentWrapper}>
+            <ProfileView
+              key={profileRefreshKey}
+              routes={routes}
+              favoriteRouteId={selectedRouteId}
+              onSelectFavoriteRoute={setSelectedRouteId}
+              onLogout={handleLogout}
+            />
+          </View>
         )}
       </View>
 
@@ -161,20 +195,32 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#090D16',
+    alignItems: 'center',
   },
   mainContent: {
     flex: 1,
+    width: '100%',
+    position: 'relative',
+  },
+  tabContentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   mapContainer: {
     flex: 1,
     position: 'relative',
+    width: '100%',
   },
   topHeaderOverlay: {
     position: 'absolute',
     top: 0,
-    left: 16,
+    left: 0,
     right: 0,
     zIndex: 10,
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
   bottomPanelContainer: {
     position: 'absolute',
@@ -182,5 +228,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
+    alignItems: 'center',
+  },
+  contentConstrained: {
+    width: '100%',
+    maxWidth: 600,
   },
 });

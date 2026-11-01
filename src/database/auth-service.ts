@@ -1,4 +1,3 @@
-
 import {
   addDoc,
   collection,
@@ -105,12 +104,13 @@ export const authService = {
   },
 
   /**
-   * Salva um relato no histórico particular do estudante.
+   * Salva um relato no histórico particular do estudante e incrementa pontos de colaboração.
    */
   async saveReportToHistory(
     report: UserReportHistory
   ): Promise<void> {
     const user = getAuthenticatedUser();
+    const userRef = getUserDocument(user.uid);
 
     await this.getCurrentUser();
 
@@ -125,6 +125,17 @@ export const authService = {
       ...report,
       createdAt: serverTimestamp(),
     });
+
+    try {
+      const snap = await getDoc(userRef);
+      const currentPoints = snap.exists() ? (snap.data().points ?? 0) : 0;
+      await updateDoc(userRef, {
+        points: currentPoints + 10,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn('Não foi possível atualizar pontos:', e);
+    }
   },
 
   /**

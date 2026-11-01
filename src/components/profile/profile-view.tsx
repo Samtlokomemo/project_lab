@@ -1,8 +1,10 @@
-
 import { Route } from '@/data/routes';
+import { authService, UserProfile, UserReportHistory } from '@/database/auth-service';
+import { auth } from '@/database/firebase';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Switch,
@@ -19,30 +21,6 @@ interface ProfileViewProps {
   onLogout: () => void;
 }
 
-const USER_HISTORY = [
-  {
-    line: 'Linha Paripueira',
-    color: '#3fb950',
-    stop: 'AL-101 Norte',
-    crowd: 'Moderado (72%)',
-    time: 'Hoje, 06:47',
-  },
-  {
-    line: 'Linha Paripueira',
-    color: '#3fb950',
-    stop: 'Ponto Mirante',
-    crowd: 'Moderado (55%)',
-    time: 'Ontem, 07:02',
-  },
-  {
-    line: 'Linha Barra de Sto. Antônio',
-    color: '#58a6ff',
-    stop: 'BR-104',
-    crowd: 'Lotado (88%)',
-    time: 'Seg, 27 Set',
-  },
-];
-
 export function ProfileView({
   routes,
   favoriteRouteId,
@@ -50,8 +28,49 @@ export function ProfileView({
   onLogout,
 }: ProfileViewProps) {
   const insets = useSafeAreaInsets();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [history, setHistory] = useState<UserReportHistory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [notifyReports, setNotifyReports] = useState(true);
   const [notifyDepartures, setNotifyDepartures] = useState(true);
+
+  useEffect(() => {
+    async function loadUserData() {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userProfile = await authService.getCurrentUser();
+          setProfile(userProfile);
+
+          try {
+            const reportHistory = await authService.getReportHistory();
+            setHistory(reportHistory);
+          } catch {
+            // Se o histórico ainda não tiver coleções, segue com lista vazia
+            setHistory([]);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do usuário:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadUserData();
+  }, []);
+
+  // Extrai as iniciais do nome para o avatar
+  const displayName = profile?.name || auth.currentUser?.displayName || 'Estudante';
+  const displayEmail = profile?.email || auth.currentUser?.email || '';
+  const university = profile?.university || 'UFAL';
+  const campus = profile?.campus || 'Campus A.C. Simões';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('') || 'UN';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -62,17 +81,17 @@ export function ProfileView({
         {/* Profile Card Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>GS</Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
 
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>Gabriel Souza</Text>
-            <Text style={styles.userEmail}>gabriel.souza@ufal.br</Text>
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userEmail}>{displayEmail}</Text>
 
             <View style={styles.badgeRow}>
               <View style={styles.statusDot} />
               <Text style={styles.badgeText}>
-                Estudante · UFAL Campus A.C. Simões
+                Estudante · {university} {campus ? `(${campus})` : ''}
               </Text>
             </View>
           </View>
@@ -81,19 +100,21 @@ export function ProfileView({
         {/* Contribution Metrics */}
         <View style={styles.metricsRow}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>14</Text>
+            <Text style={styles.metricValue}>{history.length}</Text>
             <Text style={styles.metricLabel}>Relatos feitos</Text>
           </View>
 
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: '#3fb950' }]}>
-              84 pts
+            <Text style={[styles.metricValue, { color: '#22C55E' }]}>
+              {profile?.points ?? history.length * 5} pts
             </Text>
             <Text style={styles.metricLabel}>Colaboração</Text>
           </View>
 
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>Nível 3</Text>
+            <Text style={styles.metricValue}>
+              Nível {Math.max(1, Math.floor((profile?.points ?? history.length * 5) / 20) + 1)}
+            </Text>
             <Text style={styles.metricLabel}>Comunidade</Text>
           </View>
         </View>
@@ -113,7 +134,10 @@ export function ProfileView({
               return (
                 <TouchableOpacity
                   key={route.id}
-                  onPress={() => onSelectFavoriteRoute(route.id)}
+                  onPress={() => {
+                    onSelectFavoriteRoute(route.id);
+                    authService.updateFavoriteRoute(route.id).catch(console.error);
+                  }}
                   style={[
                     styles.routeItem,
                     isFav && {
@@ -181,10 +205,10 @@ export function ProfileView({
               <Switch
                 value={notifyReports}
                 onValueChange={setNotifyReports}
-                thumbColor={notifyReports ? '#3fb950' : '#8b949e'}
+                thumbColor={notifyReports ? '#22C55E' : '#8b949e'}
                 trackColor={{
                   false: '#21262d',
-                  true: '#3fb95040',
+                  true: '#22C55E40',
                 }}
               />
             </View>
@@ -203,10 +227,10 @@ export function ProfileView({
               <Switch
                 value={notifyDepartures}
                 onValueChange={setNotifyDepartures}
-                thumbColor={notifyDepartures ? '#3fb950' : '#8b949e'}
+                thumbColor={notifyDepartures ? '#22C55E' : '#8b949e'}
                 trackColor={{
                   false: '#21262d',
-                  true: '#3fb95040',
+                  true: '#22C55E40',
                 }}
               />
             </View>
@@ -219,30 +243,39 @@ export function ProfileView({
             Histórico de Contribuições
           </Text>
 
-          <View style={styles.historyList}>
-            {USER_HISTORY.map((h, i) => (
-              <View key={i} style={styles.historyItem}>
-                <View
-                  style={[
-                    styles.historyDot,
-                    { backgroundColor: h.color },
-                  ]}
-                />
+          {history.length > 0 ? (
+            <View style={styles.historyList}>
+              {history.map((h, i) => (
+                <View key={i} style={styles.historyItem}>
+                  <View
+                    style={[
+                      styles.historyDot,
+                      { backgroundColor: '#22C55E' },
+                    ]}
+                  />
 
-                <View style={styles.historyInfo}>
-                  <Text style={styles.historyLine}>
-                    {h.line} · {h.stop}
-                  </Text>
+                  <View style={styles.historyInfo}>
+                    <Text style={styles.historyLine}>
+                      {h.line} · {h.stop}
+                    </Text>
 
-                  <Text style={styles.historyCrowd}>
-                    Lotação: {h.crowd}
-                  </Text>
+                    <Text style={styles.historyCrowd}>
+                      Lotação: {h.crowdLevel}%
+                    </Text>
+                  </View>
+
+                  <Text style={styles.historyTime}>{h.time}</Text>
                 </View>
-
-                <Text style={styles.historyTime}>{h.time}</Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyHistoryBox}>
+              <Ionicons name="chatbubbles-outline" size={24} color="#64748B" />
+              <Text style={styles.emptyHistoryText}>
+                Nenhum relato enviado ainda. Seus relatos de ônibus aparecerão aqui!
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Logout Button */}
@@ -281,20 +314,22 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#21262d',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   avatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#238636',
+    backgroundColor: 'rgba(34, 197, 94, 0.18)',
+    borderWidth: 1.5,
+    borderColor: '#22C55E',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#e6edf3',
+    color: '#22C55E',
   },
   userInfo: {
     flex: 1,
@@ -302,11 +337,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#e6edf3',
+    color: '#F8FAFC',
   },
   userEmail: {
     fontSize: 12,
-    color: '#8b949e',
+    color: '#94A3B8',
     marginTop: 2,
   },
   badgeRow: {
@@ -319,11 +354,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#3fb950',
+    backgroundColor: '#22C55E',
   },
   badgeText: {
     fontSize: 11,
-    color: '#3fb950',
+    color: '#22C55E',
     fontWeight: '600',
   },
   metricsRow: {
@@ -332,9 +367,9 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: '#161b22',
+    backgroundColor: '#131A29',
     borderWidth: 1,
-    borderColor: '#30363d',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
     padding: 12,
     alignItems: 'center',
@@ -342,11 +377,11 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#e6edf3',
+    color: '#F8FAFC',
   },
   metricLabel: {
     fontSize: 10,
-    color: '#8b949e',
+    color: '#94A3B8',
     marginTop: 3,
   },
   section: {
@@ -355,13 +390,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#8b949e',
+    color: '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: '#6e7681',
+    color: '#64748B',
     marginTop: -4,
   },
   routesList: {
@@ -371,9 +406,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#161b22',
+    backgroundColor: '#131A29',
     borderWidth: 1,
-    borderColor: '#30363d',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
     padding: 12,
   },
@@ -390,17 +425,17 @@ const styles = StyleSheet.create({
   routeItemName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#8b949e',
+    color: '#94A3B8',
   },
   routeItemSub: {
     fontSize: 11,
-    color: '#6e7681',
+    color: '#64748B',
     marginTop: 2,
   },
   settingsGroup: {
-    backgroundColor: '#161b22',
+    backgroundColor: '#131A29',
     borderWidth: 1,
-    borderColor: '#30363d',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
     overflow: 'hidden',
   },
@@ -412,7 +447,7 @@ const styles = StyleSheet.create({
   },
   settingRowBorder: {
     borderTopWidth: 1,
-    borderTopColor: '#21262d',
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
   settingInfo: {
     flex: 1,
@@ -421,20 +456,35 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#e6edf3',
+    color: '#F8FAFC',
   },
   settingDesc: {
     fontSize: 11,
-    color: '#8b949e',
+    color: '#94A3B8',
     marginTop: 2,
   },
   historyList: {
-    backgroundColor: '#161b22',
+    backgroundColor: '#131A29',
     borderWidth: 1,
-    borderColor: '#30363d',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 14,
     padding: 12,
     gap: 12,
+  },
+  emptyHistoryBox: {
+    backgroundColor: '#131A29',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyHistoryText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   historyItem: {
     flexDirection: 'row',
@@ -452,15 +502,15 @@ const styles = StyleSheet.create({
   historyLine: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#e6edf3',
+    color: '#F8FAFC',
   },
   historyCrowd: {
     fontSize: 11,
-    color: '#8b949e',
+    color: '#94A3B8',
   },
   historyTime: {
     fontSize: 10,
-    color: '#6e7681',
+    color: '#64748B',
   },
   logoutButton: {
     flexDirection: 'row',
