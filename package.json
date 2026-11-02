@@ -46,7 +46,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "backend": "node backend/server.js",
-    "deploy": "expo export --platform web && gh-pages -d dist"
+    "deploy": "expo export --platform web && gh-pages --nojekyll -d dist"
   },
   "private": true
 }
