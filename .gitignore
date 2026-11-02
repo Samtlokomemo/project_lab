@@ -45,3 +45,4 @@ backend/node_modules/
 
 # local assets and mockups
 imagensmodelo/
+node_modules
